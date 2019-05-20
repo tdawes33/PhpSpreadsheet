@@ -500,6 +500,67 @@ class Xls extends BaseReader
     }
 
     /**
+     * Return sheet totalRows, state, type and stream checksum in array - indexed by sheet name
+     *
+     * @param $pFilename
+     * @return array
+     * @throws Exception
+     */
+    public function getSheetsForCompare($pFilename)
+    {
+        if (empty($this->sheets)) {
+            $worksheetInfo = $this->listWorksheetInfo($pFilename);
+        }
+
+        $tmpInfo = [];
+        foreach ($this->sheets as $i => $sheet) {
+            $name = $sheet['name'];
+            $tmpInfo[$name] = [
+                'totalRows' => $worksheetInfo[$i]['totalRows'],
+                'sheetState' => $sheet['sheetState'],
+                'sheetType' => $sheet['sheetType']
+            ];
+
+            $startPos = $this->pos = $sheet['offset'];
+            $crc = hash_init('crc32');
+            while ($this->pos <= $this->dataSize - 4) {
+                $startPos = $this->pos;
+
+                $code = self::getUInt2d($this->data, $this->pos);
+                switch ($code) {
+                    case self::XLS_TYPE_RK:
+                    case self::XLS_TYPE_LABELSST:
+                    case self::XLS_TYPE_NUMBER:
+                    case self::XLS_TYPE_FORMULA:
+                    case self::XLS_TYPE_BOOLERR:
+                    case self::XLS_TYPE_LABEL:
+                        $length = self::getUInt2d($this->data, $this->pos + 2);
+                        $this->pos += 4 + $length;
+
+                        break;
+                    case self::XLS_TYPE_BOF:
+                        $this->readBof();
+
+                        break;
+                    case self::XLS_TYPE_EOF:
+                        $this->readDefault();
+
+                        break 2;
+                    default:
+                        $this->readDefault();
+
+                        break;
+                }
+                hash_update($crc, substr($this->data, $startPos, $this->pos - $startPos));
+            }
+            $tmpInfo[$name]['crc32'] = hash_final($crc);
+        }
+
+        return $tmpInfo;
+     }
+
+
+    /**
      * Return worksheet info (Name, Last Column Letter, Last Column Index, Total Rows, Total Columns).
      *
      * @param string $pFilename
