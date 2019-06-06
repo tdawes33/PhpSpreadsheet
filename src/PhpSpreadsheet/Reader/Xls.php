@@ -564,13 +564,15 @@ class Xls extends BaseReader
                     case self::XLS_TYPE_MULBLANK:           // $this->readMulBlank();
                     case self::XLS_TYPE_FORMULA:            // $this->readFormula();
 
+                    // may be useful
                     case self::XLS_TYPE_SCL:                // $this->readScl();
+                    case self::XLS_TYPE_PAGELAYOUTVIEW:     // $this->readPageLayoutView();
 
                         $this->pos += 4 + self::getUInt2d($this->data, $this->pos + 2);
 
                         break;
+                    case self::XLS_TYPE_NUMBER:             // $this->readNumber();
                     case self::XLS_TYPE_WINDOW2:            // $this->readWindow2();    //THIS DETECTS STRING CHANGES
-                    case self::XLS_TYPE_PAGELAYOUTVIEW:     // $this->readPageLayoutView();
                     case self::XLS_TYPE_SHEETLAYOUT:        // $this->readSheetLayout();
                     case self::XLS_TYPE_ROW:                // $this->readRow();
                     case self::XLS_TYPE_SHEETPROTECTION:    // $this->readSheetProtection();
@@ -578,9 +580,8 @@ class Xls extends BaseReader
                     case self::XLS_TYPE_MULRK:              // $this->readMulRk();
                     case self::XLS_TYPE_RK:                 // $this->readRk();
                     case self::XLS_TYPE_LABEL:              // $this->readLabel();
-                    case self::XLS_TYPE_NUMBER:             // $this->readNumber();
-                    case self::XLS_TYPE_TXO:                // $this->readTextObject();
                     case self::XLS_TYPE_NOTE:               // $this->readNote();
+                    case self::XLS_TYPE_TXO:                // $this->readTextObject();
                         $length = self::getUInt2d($this->data, $this->pos + 2);
                         $recordData = $this->readRecordData($this->data, $this->pos + 4, $length);
                         $this->pos += 4 + $length;
