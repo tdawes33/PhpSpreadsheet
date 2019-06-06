@@ -542,7 +542,6 @@ class Xls extends BaseReader
                     case self::XLS_TYPE_TOPMARGIN:
                     case self::XLS_TYPE_BOTTOMMARGIN:
                     case self::XLS_TYPE_PAGESETUP:      //$this->readPageSetup();
-                    case self::XLS_TYPE_PROTECT:        //$this->readProtect();
                     case self::XLS_TYPE_SCENPROTECT:        //$this->readScenProtect();
                     case self::XLS_TYPE_OBJECTPROTECT:      //$this->readObjectProtect();
                     case self::XLS_TYPE_PASSWORD:           // $this->readPassword();
@@ -557,31 +556,32 @@ class Xls extends BaseReader
                     case self::XLS_TYPE_MERGEDCELLS:        // $this->readMergedCells();
                     case self::XLS_TYPE_DATAVALIDATIONS:    // $this->readDataValidations();
                     case self::XLS_TYPE_DATAVALIDATION:     // $this->readDataValidation();
+                    case self::XLS_TYPE_PROTECT:        //$this->readProtect();
                     case self::XLS_TYPE_HYPERLINK:          // $this->readHyperLink();
                     case self::XLS_TYPE_SHAREDFMLA:         // $this->readSharedFmla();
 
-                    case self::XLS_TYPE_LABELSST:           // $this->readLabelSst();   volatile
                     case self::XLS_TYPE_MULBLANK:           // $this->readMulBlank();
-                    case self::XLS_TYPE_FORMULA:            // $this->readFormula();
 
                     // may be useful
+                    case self::XLS_TYPE_FORMULA:            // $this->readFormula();
                     case self::XLS_TYPE_SCL:                // $this->readScl();
                     case self::XLS_TYPE_PAGELAYOUTVIEW:     // $this->readPageLayoutView();
+                    case self::XLS_TYPE_MULRK:              // $this->readMulRk();
+                    case self::XLS_TYPE_RK:                 // $this->readRk();
+                    case self::XLS_TYPE_SHEETLAYOUT:        // $this->readSheetLayout();
+                    case self::XLS_TYPE_RANGEPROTECTION:    // $this->readRangeProtection();
+                    case self::XLS_TYPE_LABELSST:           // $this->readLabelSst();   volatile
 
                         $this->pos += 4 + self::getUInt2d($this->data, $this->pos + 2);
 
                         break;
-                    case self::XLS_TYPE_NUMBER:             // $this->readNumber();
-                    case self::XLS_TYPE_WINDOW2:            // $this->readWindow2();    //THIS DETECTS STRING CHANGES
-                    case self::XLS_TYPE_SHEETLAYOUT:        // $this->readSheetLayout();
                     case self::XLS_TYPE_ROW:                // $this->readRow();
-                    case self::XLS_TYPE_SHEETPROTECTION:    // $this->readSheetProtection();
-                    case self::XLS_TYPE_RANGEPROTECTION:    // $this->readRangeProtection();
-                    case self::XLS_TYPE_MULRK:              // $this->readMulRk();
-                    case self::XLS_TYPE_RK:                 // $this->readRk();
+                    case self::XLS_TYPE_NUMBER:             // $this->readNumber();
+                    case self::XLS_TYPE_TXO:                // $this->readTextObject();
+                    case self::XLS_TYPE_WINDOW2:            // $this->readWindow2();    //THIS DETECTS STRING CHANGES
                     case self::XLS_TYPE_LABEL:              // $this->readLabel();
                     case self::XLS_TYPE_NOTE:               // $this->readNote();
-                    case self::XLS_TYPE_TXO:                // $this->readTextObject();
+                    case self::XLS_TYPE_SHEETPROTECTION:    // $this->readSheetProtection();
                         $length = self::getUInt2d($this->data, $this->pos + 2);
                         $recordData = $this->readRecordData($this->data, $this->pos + 4, $length);
                         $this->pos += 4 + $length;
