@@ -521,44 +521,116 @@ class Xls extends BaseReader
                 'sheetType' => $sheet['sheetType']
             ];
 
-            $startPos = $this->pos = $sheet['offset'];
+            $this->pos = $sheet['offset'];
             $crc = hash_init('crc32');
             while ($this->pos <= $this->dataSize - 4) {
-                $startPos = $this->pos;
 
                 $code = self::getUInt2d($this->data, $this->pos);
                 switch ($code) {
-                    case self::XLS_TYPE_RK:
-                    case self::XLS_TYPE_LABELSST:
-                    case self::XLS_TYPE_NUMBER:
-                    case self::XLS_TYPE_FORMULA:
-                    case self::XLS_TYPE_BOOLERR:
-                    case self::XLS_TYPE_LABEL:
+                    case self::XLS_TYPE_BOF:            //$this->readBof();
+                    case self::XLS_TYPE_PRINTGRIDLINES:
+                    case self::XLS_TYPE_DEFAULTROWHEIGHT:
+                    case self::XLS_TYPE_SHEETPR:
+                    case self::XLS_TYPE_HORIZONTALPAGEBREAKS:
+                    case self::XLS_TYPE_VERTICALPAGEBREAKS:
+                    case self::XLS_TYPE_HEADER:
+                    case self::XLS_TYPE_FOOTER:
+                    case self::XLS_TYPE_HCENTER:
+                    case self::XLS_TYPE_VCENTER:
+                    case self::XLS_TYPE_LEFTMARGIN:
+                    case self::XLS_TYPE_RIGHTMARGIN:
+                    case self::XLS_TYPE_TOPMARGIN:
+                    case self::XLS_TYPE_BOTTOMMARGIN:
+                    case self::XLS_TYPE_PAGESETUP:      //$this->readPageSetup();
+                    case self::XLS_TYPE_PROTECT:        //$this->readProtect();
+                    case self::XLS_TYPE_SCENPROTECT:        //$this->readScenProtect();
+                    case self::XLS_TYPE_OBJECTPROTECT:      //$this->readObjectProtect();
+                    case self::XLS_TYPE_PASSWORD:           // $this->readPassword();
+                    case self::XLS_TYPE_DEFCOLWIDTH:        // $this->readDefColWidth();
+                    case self::XLS_TYPE_COLINFO:            // $this->readColInfo();
+                    case self::XLS_TYPE_DIMENSION:          // $this->readDefault();
+                    case self::XLS_TYPE_DBCELL:             // $this->readDefault();
+                    case self::XLS_TYPE_BLANK:              // $this->readBlank();
+                    case self::XLS_TYPE_OBJ:                // $this->readObj();
+                    case self::XLS_TYPE_PANE:               // $this->readPane();
+                    case self::XLS_TYPE_SELECTION:          // $this->readSelection();
+                    case self::XLS_TYPE_MERGEDCELLS:        // $this->readMergedCells();
+                    case self::XLS_TYPE_DATAVALIDATIONS:    // $this->readDataValidations();
+                    case self::XLS_TYPE_DATAVALIDATION:     // $this->readDataValidation();
+                    case self::XLS_TYPE_HYPERLINK:          // $this->readHyperLink();
+                    case self::XLS_TYPE_SHAREDFMLA:         // $this->readSharedFmla();
+
+                    case self::XLS_TYPE_LABELSST:           // $this->readLabelSst();   volatile
+                    case self::XLS_TYPE_MULBLANK:           // $this->readMulBlank();
+                    case self::XLS_TYPE_FORMULA:            // $this->readFormula();
+
+                    case self::XLS_TYPE_SCL:                // $this->readScl();
+
+                        $this->pos += 4 + self::getUInt2d($this->data, $this->pos + 2);
+
+                        break;
+                    case self::XLS_TYPE_WINDOW2:            // $this->readWindow2();    //THIS DETECTS STRING CHANGES
+                    case self::XLS_TYPE_PAGELAYOUTVIEW:     // $this->readPageLayoutView();
+                    case self::XLS_TYPE_SHEETLAYOUT:        // $this->readSheetLayout();
+                    case self::XLS_TYPE_ROW:                // $this->readRow();
+                    case self::XLS_TYPE_SHEETPROTECTION:    // $this->readSheetProtection();
+                    case self::XLS_TYPE_RANGEPROTECTION:    // $this->readRangeProtection();
+                    case self::XLS_TYPE_MULRK:              // $this->readMulRk();
+                    case self::XLS_TYPE_RK:                 // $this->readRk();
+                    case self::XLS_TYPE_LABEL:              // $this->readLabel();
+                    case self::XLS_TYPE_NUMBER:             // $this->readNumber();
+                    case self::XLS_TYPE_TXO:                // $this->readTextObject();
+                    case self::XLS_TYPE_NOTE:               // $this->readNote();
                         $length = self::getUInt2d($this->data, $this->pos + 2);
+                        $recordData = $this->readRecordData($this->data, $this->pos + 4, $length);
+                        $this->pos += 4 + $length;
+
+                        hash_update($crc, $recordData);     // only crc changes we're interested in
+
+                        break;
+                    case self::XLS_TYPE_MSODRAWING:         // $this->readMsoDrawing();
+                        $i = 0;
+                        do {
+                            ++$i;
+                            $this->pos += 4 + self::getUInt2d($this->data, $this->pos + 2);
+                            $nextIdentifier = self::getUInt2d($this->data, $this->pos);
+                        } while ($nextIdentifier === self::XLS_TYPE_CONTINUE);
+
+                        break;
+                    case self::XLS_TYPE_CONTINUE:
+                        $this->readContinue();
+                        $length = self::getUInt2d($this->data, $this->pos + 2);
+                        $recordData = $this->readRecordData($this->data, $this->pos + 4, $length);
+                        if ($this->drawingData !== '' && $length >= 4) {
+
+                            $validSplitPoints = [0xF003, 0xF004, 0xF00D]; // add identifiers if we find more
+                            $splitPoint = self::getUInt2d($recordData, 2);
+
+                            if (in_array($splitPoint, $validSplitPoints)) {
+                                do {
+                                    ++$i;
+                                    $this->pos += 4 + self::getUInt2d($this->data, $this->pos + 2);
+                                    $nextIdentifier = self::getUInt2d($this->data, $this->pos);
+                                } while ($nextIdentifier === self::XLS_TYPE_CONTINUE);
+                            }
+                        }
                         $this->pos += 4 + $length;
 
                         break;
-                    case self::XLS_TYPE_BOF:
-                        $this->readBof();
-
-                        break;
                     case self::XLS_TYPE_EOF:
-                        $this->readDefault();
+                        $this->pos += 4 + self::getUInt2d($this->data, $this->pos + 2);
 
                         break 2;
                     default:
-                        $this->readDefault();
+                        $this->pos += 4 + self::getUInt2d($this->data, $this->pos + 2);
 
-                        break;
                 }
-                hash_update($crc, substr($this->data, $startPos, $this->pos - $startPos));
             }
             $tmpInfo[$name]['crc32'] = hash_final($crc);
         }
 
         return $tmpInfo;
      }
-
 
     /**
      * Return worksheet info (Name, Last Column Letter, Last Column Index, Total Rows, Total Columns).
