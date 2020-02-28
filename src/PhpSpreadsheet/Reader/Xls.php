@@ -3959,7 +3959,7 @@ class Xls extends BaseReader
                 }
             }
 
-            if (!$this->readDataOnly && !$emptyCell) {
+            if (!$this->readDataOnly && !$emptyCell && isset($this->mapCellXfIndex[$xfIndex])) {
                 // add style information
                 $cell->setXfIndex($this->mapCellXfIndex[$xfIndex]);
             }
@@ -5413,12 +5413,10 @@ class Xls extends BaseReader
             $nextIdentifier = self::getUInt2d($this->data, $this->pos);
         } while ($nextIdentifier == self::XLS_TYPE_CONTINUE);
 
-        $splicedData = [
+        return [
             'recordData' => $data,
             'spliceOffsets' => $spliceOffsets,
         ];
-
-        return $splicedData;
     }
 
     /**
