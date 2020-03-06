@@ -25,7 +25,7 @@ class Calculation
     //    Function (allow for the old @ symbol that could be used to prefix a function, but we'll ignore it)
     const CALCULATION_REGEXP_FUNCTION = '@?(?:_xlfn\.)?([A-Z][A-Z0-9\.]*)[\s]*\(';
     //    Cell reference (cell or range of cells, with or without a sheet reference)
-    const CALCULATION_REGEXP_CELLREF = '((([^\s,!&%^\/\*\+<>=-]*)|(\'[^\']*\')|(\"[^\"]*\"))!)?\$?([a-z]{1,3})\$?(\d{1,7})';
+    const CALCULATION_REGEXP_CELLREF = '((([^\s,!&%^\/\*\+<>=-]*)|(\'[^\']*\')|(\"[^\"]*\"))!)?\$?\b([a-z]{1,3})\$?(\d{1,7})(?![\w.])';
     //    Named Range of cells
     const CALCULATION_REGEXP_NAMEDRANGE = '((([^\s,!&%^\/\*\+<>=-]*)|(\'[^\']*\')|(\"[^\"]*\"))!)?([_A-Z][_A-Z0-9\.]*)';
     //    Error
@@ -263,6 +263,11 @@ class Calculation
             'functionCall' => [Logical::class, 'logicalAnd'],
             'argumentCount' => '1+',
         ],
+        'ARABIC' => [
+            'category' => Category::CATEGORY_MATH_AND_TRIG,
+            'functionCall' => [MathTrig::class, 'ARABIC'],
+            'argumentCount' => '1',
+        ],
         'AREAS' => [
             'category' => Category::CATEGORY_LOOKUP_AND_REFERENCE,
             'functionCall' => [Functions::class, 'DUMMY'],
@@ -327,6 +332,11 @@ class Calculation
             'category' => Category::CATEGORY_TEXT_AND_DATA,
             'functionCall' => [Functions::class, 'DUMMY'],
             'argumentCount' => '1',
+        ],
+        'BASE' => [
+            'category' => Category::CATEGORY_MATH_AND_TRIG,
+            'functionCall' => [MathTrig::class, 'BASE'],
+            'argumentCount' => '2,3',
         ],
         'BESSELI' => [
             'category' => Category::CATEGORY_ENGINEERING,
@@ -2864,13 +2874,13 @@ class Calculation
         $this->debugLog->clearLog();
         $this->cyclicReferenceStack->clear();
 
+        $resetCache = $this->getCalculationCacheEnabled();
         if ($this->spreadsheet !== null && $cellID === null && $pCell === null) {
             $cellID = 'A1';
             $pCell = $this->spreadsheet->getActiveSheet()->getCell($cellID);
         } else {
             //    Disable calculation cacheing because it only applies to cell calculations, not straight formulae
             //    But don't actually flush any cache
-            $resetCache = $this->getCalculationCacheEnabled();
             $this->calculationCacheEnabled = false;
         }
 
@@ -3239,7 +3249,7 @@ class Calculation
     /**
      * @param string $formula
      *
-     * @return string
+     * @return false|string False indicates an error
      */
     private function convertMatrixReferences($formula)
     {
@@ -3459,7 +3469,7 @@ class Calculation
                     $parenthesisDepthMap[$pendingStoreKey] -= 1;
                 }
 
-                if (preg_match('/^' . self::CALCULATION_REGEXP_FUNCTION . '$/i', $d['value'], $matches)) {    //    Did this parenthesis just close a function?
+                if (is_array($d) && preg_match('/^' . self::CALCULATION_REGEXP_FUNCTION . '$/i', $d['value'], $matches)) {    //    Did this parenthesis just close a function?
                     if (!empty($pendingStoreKey) && $parenthesisDepthMap[$pendingStoreKey] == -1) {
                         // we are closing an IF(
                         if ($d['value'] != 'IF(') {
@@ -4159,13 +4169,6 @@ class Calculation
                 if ($pCellParent) {
                     $pCell->attach($pCellParent);
                 }
-                if (($cellID == 'AC99') || (isset($pCell) && $pCell->getCoordinate() == 'AC99')) {
-                    if (defined('RESOLVING')) {
-                        define('RESOLVING2', true);
-                    } else {
-                        define('RESOLVING', true);
-                    }
-                }
 
                 $functionName = $matches[1];
                 $argCount = $stack->pop();
@@ -4786,8 +4789,7 @@ class Calculation
 
             return $value;
         }, $tokens);
-        $str = '[ ' . implode(' | ', $tokensStr) . ' ]';
 
-        return $str;
+        return '[ ' . implode(' | ', $tokensStr) . ' ]';
     }
 }
